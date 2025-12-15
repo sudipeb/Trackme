@@ -11,14 +11,28 @@ class UserLocation extends StatefulWidget {
 }
 
 class _UserLocationState extends State<UserLocation> {
-  String _locationMessage = 'Press the button to get location';
-  bool _isLoading = false;
+  String _statusMessage = 'Initializing...';
+  Position? _currentPosition;
   StreamSubscription<Position>? _positionStream;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initLocationTracking();
+  }
 
   @override
   void dispose() {
     _positionStream?.cancel();
     super.dispose();
+  }
+
+  Future<void> _initLocationTracking() async {
+    final hasPermission = await _handlePermission();
+    if (!hasPermission) return;
+
+    _startLocationUpdates();
   }
 
   Future<bool> _handlePermission() async {
@@ -29,7 +43,8 @@ class _UserLocationState extends State<UserLocation> {
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       setState(() {
-        _locationMessage = 'Location services are disabled.';
+        _statusMessage = 'Location services are disabled. Please enable GPS.';
+        _hasError = true;
       });
       return false;
     }
@@ -37,11 +52,11 @@ class _UserLocationState extends State<UserLocation> {
     // Check the status of permissions
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
-      // Request permission if permission is denied
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
         setState(() {
-          _locationMessage = 'Location permissions are denied.';
+          _statusMessage = 'Location permissions are denied.';
+          _hasError = true;
         });
         return false;
       }
@@ -49,8 +64,9 @@ class _UserLocationState extends State<UserLocation> {
 
     if (permission == LocationPermission.deniedForever) {
       setState(() {
-        _locationMessage =
-            'Location permissions are permanently denied, cannot request.';
+        _statusMessage =
+            'Location permissions are permanently denied.\nPlease enable in Settings.';
+        _hasError = true;
       });
       return false;
     }
@@ -58,162 +74,195 @@ class _UserLocationState extends State<UserLocation> {
     return true;
   }
 
-  Future<void> _getCurrentLocation() async {
+  void _startLocationUpdates() {
     setState(() {
-      _isLoading = true;
-      _locationMessage = 'Getting location...';
-    });
-
-    final hasPermission = await _handlePermission();
-    if (!hasPermission) {
-      setState(() {
-        _isLoading = false;
-      });
-      return;
-    }
-
-    try {
-      // Get current location
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      setState(() {
-        _locationMessage =
-            'Latitude: ${position.latitude.toStringAsFixed(6)}\nLongitude: ${position.longitude.toStringAsFixed(6)}';
-        _isLoading = false;
-      });
-
-      debugPrint(
-        'Latitude: ${position.latitude}, Longitude: ${position.longitude}',
-      );
-    } catch (e) {
-      setState(() {
-        _locationMessage = 'Error getting location: $e';
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _startLocationUpdates() async {
-    final hasPermission = await _handlePermission();
-    if (!hasPermission) return;
-
-    setState(() {
-      _locationMessage = 'Listening for location updates...';
+      _statusMessage = 'Waiting for location...';
+      _hasError = false;
     });
 
     _positionStream =
         Geolocator.getPositionStream(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
-            distanceFilter: 10, // Updates only when moving 10 meters
+            distanceFilter: 10, // Updates when moving 10 meters
           ),
         ).listen(
           (Position position) {
             setState(() {
-              _locationMessage =
-                  'Latitude: ${position.latitude.toStringAsFixed(6)}\nLongitude: ${position.longitude.toStringAsFixed(6)}\n\n(Live updates enabled)';
+              _currentPosition = position;
+              _statusMessage = 'Tracking active';
             });
-            debugPrint('${position.latitude}, ${position.longitude}');
+            debugPrint('Location: ${position.latitude}, ${position.longitude}');
           },
           onError: (e) {
             setState(() {
-              _locationMessage = 'Error: $e';
+              _statusMessage = 'Error: $e';
+              _hasError = true;
             });
           },
         );
   }
 
-  void _stopLocationUpdates() {
-    _positionStream?.cancel();
-    _positionStream = null;
-    setState(() {
-      _locationMessage = 'Location updates stopped.';
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Track Me'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('Track Me'),
+        centerTitle: true,
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Status indicator
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: _hasError
+                      ? Colors.red.shade100
+                      : _currentPosition != null
+                      ? Colors.green.shade100
+                      : Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _hasError
+                          ? Icons.error
+                          : _currentPosition != null
+                          ? Icons.gps_fixed
+                          : Icons.gps_not_fixed,
+                      color: _hasError
+                          ? Colors.red
+                          : _currentPosition != null
+                          ? Colors.green
+                          : Colors.orange,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _statusMessage,
+                      style: TextStyle(
+                        color: _hasError
+                            ? Colors.red.shade700
+                            : _currentPosition != null
+                            ? Colors.green.shade700
+                            : Colors.orange.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 40),
+
               // Location display card
               Card(
-                elevation: 4,
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.all(24.0),
                   child: Column(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.location_on,
-                        size: 48,
-                        color: Colors.blue,
+                        size: 64,
+                        color: _currentPosition != null
+                            ? Colors.blue
+                            : Colors.grey,
                       ),
-                      const SizedBox(height: 16),
-                      if (_isLoading)
-                        const CircularProgressIndicator()
+                      const SizedBox(height: 20),
+                      if (_currentPosition == null && !_hasError)
+                        const Column(
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text(
+                              'Getting your location...',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        )
+                      else if (_currentPosition != null)
+                        Column(
+                          children: [
+                            _buildLocationRow(
+                              'Latitude',
+                              _currentPosition!.latitude.toStringAsFixed(6),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildLocationRow(
+                              'Longitude',
+                              _currentPosition!.longitude.toStringAsFixed(6),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildLocationRow(
+                              'Accuracy',
+                              '${_currentPosition!.accuracy.toStringAsFixed(1)} m',
+                            ),
+                            const SizedBox(height: 12),
+                            _buildLocationRow(
+                              'Speed',
+                              '${(_currentPosition!.speed * 3.6).toStringAsFixed(1)} km/h',
+                            ),
+                          ],
+                        )
                       else
                         Text(
-                          _locationMessage,
+                          _statusMessage,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 16),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.red.shade700,
+                          ),
                         ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-              // Get current location button
-              ElevatedButton.icon(
-                onPressed: _isLoading ? null : _getCurrentLocation,
-                icon: const Icon(Icons.my_location),
-                label: const Text('Get Current Location'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
+
+              // Info text
+              if (_currentPosition != null)
+                const Text(
+                  'Location updates when you move 10+ meters',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-              ),
-              const SizedBox(height: 12),
-              // Start/Stop live updates button
-              ElevatedButton.icon(
-                onPressed: () {
-                  if (_positionStream == null) {
-                    _startLocationUpdates();
-                  } else {
-                    _stopLocationUpdates();
-                  }
-                },
-                icon: Icon(
-                  _positionStream == null ? Icons.play_arrow : Icons.stop,
-                ),
-                label: Text(
-                  _positionStream == null
-                      ? 'Start Live Updates'
-                      : 'Stop Live Updates',
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  backgroundColor: _positionStream == null
-                      ? Colors.green
-                      : Colors.red,
-                  foregroundColor: Colors.white,
-                ),
-              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLocationRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+      ],
     );
   }
 }

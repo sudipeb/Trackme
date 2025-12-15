@@ -12,11 +12,11 @@ class UserLocation extends StatelessWidget {
           distanceFilter: 10, // Updates only when moving 10 meters
         ),
       ).listen((Position position) {
-        print('${position.latitude}, ${position.longitude}');
+        debugPrint('${position.latitude}, ${position.longitude}');
       });
   @override
   Widget build(BuildContext context) {
-    Future<void> _getCurrentLocation() async {
+    Future<void> getCurrentLocation() async {
       bool serviceEnabled;
       LocationPermission permission;
       // Check if location services are enabled
@@ -45,13 +45,15 @@ class UserLocation extends StatelessWidget {
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      print('Latitude: ${position.latitude}, Longitude: ${position.longitude}');
+      debugPrint(
+        'Latitude: ${position.latitude}, Longitude: ${position.longitude}',
+      );
     }
 
     return Scaffold(
       body: Center(
         child: ElevatedButton(
-          onPressed: () => _getCurrentLocation(),
+          onPressed: () => getCurrentLocation(),
           child: Text("The desired Location:"),
         ),
       ),

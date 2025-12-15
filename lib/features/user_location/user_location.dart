@@ -1,9 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
 class UserLocation extends StatelessWidget {
-  const UserLocation({super.key});
-
+  UserLocation({super.key});
+  final StreamSubscription<Position> positionStream =
+      Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10, // Updates only when moving 10 meters
+        ),
+      ).listen((Position position) {
+        print('${position.latitude}, ${position.longitude}');
+      });
   @override
   Widget build(BuildContext context) {
     Future<void> _getCurrentLocation() async {

@@ -90,12 +90,13 @@ class _UserLocationState extends State<UserLocation> {
                             notificationTitle:
                                 "Location Fetching in Background",
                             notificationText: "Location Fetching in background",
-                            // enableWakeLock: true,
+                            enableWakeLock: true,
                             enableWifiLock: true,
                             notificationIcon: AndroidResource(name: "Track me"),
                           ),
                     )
                   : AppleSettings(
+                      distanceFilter: 10,
                       accuracy: LocationAccuracy.high,
                       activityType: ActivityType.fitness,
                       pauseLocationUpdatesAutomatically: true,

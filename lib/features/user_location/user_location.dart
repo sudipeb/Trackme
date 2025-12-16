@@ -224,6 +224,10 @@ class _UserLocationState extends State<UserLocation> {
                               'Altitude',
                               '${_currentPosition!.altitude.toStringAsFixed(1)} m',
                             ),
+                            _buildLocationRow(
+                              'TimeStamp',
+                              '${_currentPosition!.timestamp}',
+                            ),
                           ],
                         )
                       else

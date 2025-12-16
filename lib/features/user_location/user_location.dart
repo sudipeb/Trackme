@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -19,6 +20,7 @@ class _UserLocationState extends State<UserLocation> {
   @override
   void initState() {
     super.initState();
+    // _startLocationUpdates();
     _initLocationTracking();
   }
 
@@ -35,7 +37,7 @@ class _UserLocationState extends State<UserLocation> {
     _startLocationUpdates();
   }
 
-  Future<bool> _handlePermission() async {
+  Future<bool> _handlePermission({VoidCallback? inSuccess}) async {
     bool serviceEnabled;
     LocationPermission permission;
 
@@ -71,68 +73,38 @@ class _UserLocationState extends State<UserLocation> {
       return false;
     }
 
+    inSuccess?.call();
     return true;
   }
 
   void _startLocationUpdates() {
-    setState(() {
-      _statusMessage = 'Waiting for location...';
-      _hasError = false;
-    });
-
-    _positionStream =
-        Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 10, // Updates when moving 10 meters
-          ),
-        ).listen(
-          (Position position) {
-            setState(() {
-              _currentPosition = position;
-              _statusMessage = 'Tracking active';
+    _handlePermission(
+      inSuccess: () async {
+        _positionStream =
+            Geolocator.getPositionStream(
+              locationSettings: Platform.isAndroid
+                  ? AndroidSettings(
+                      foregroundNotificationConfig:
+                          ForegroundNotificationConfig(
+                            notificationTitle:
+                                "Location Fetching in Background",
+                            notificationText: "Location Fetching in background",
+                            // enableWakeLock: true,
+                            enableWifiLock: true,
+                          ),
+                    )
+                  : AppleSettings(
+                      accuracy: LocationAccuracy.high,
+                      activityType: ActivityType.fitness,
+                      pauseLocationUpdatesAutomatically: true,
+                      showBackgroundLocationIndicator: false,
+                    ),
+            ).listen((event) {
+              _currentPosition = event;
+              debugPrint(_currentPosition.toString());
             });
-            // Print all location data to debug console
-            _printLocationData(position);
-          },
-          onError: (e) {
-            setState(() {
-              _statusMessage = 'Error: $e';
-              _hasError = true;
-            });
-            debugPrint('❌ Location Error: $e');
-          },
-        );
-  }
-
-  void _printLocationData(Position position) {
-    debugPrint('═══════════════════════════════════════════════════════');
-    debugPrint('📍 LOCATION UPDATE - ${DateTime.now()}');
-    debugPrint('═══════════════════════════════════════════════════════');
-    debugPrint('📌 Latitude:      ${position.latitude}');
-    debugPrint('📌 Longitude:     ${position.longitude}');
-    debugPrint(
-      '🎯 Accuracy:      ± ${position.accuracy.toStringAsFixed(2)} meters',
+      },
     );
-    debugPrint(
-      '🏔️  Altitude:      ${position.altitude.toStringAsFixed(2)} meters',
-    );
-    debugPrint(
-      '📏 Alt Accuracy:  ± ${position.altitudeAccuracy.toStringAsFixed(2)} meters',
-    );
-    debugPrint(
-      '🚀 Speed:         ${position.speed.toStringAsFixed(2)} m/s (${(position.speed * 3.6).toStringAsFixed(2)} km/h)',
-    );
-    debugPrint(
-      '📐 Speed Accuracy: ± ${position.speedAccuracy.toStringAsFixed(2)} m/s',
-    );
-    debugPrint('🧭 Heading:       ${position.heading.toStringAsFixed(2)}°');
-    debugPrint(
-      '📐 Head Accuracy: ± ${position.headingAccuracy.toStringAsFixed(2)}°',
-    );
-    debugPrint('⏰ Timestamp:     ${position.timestamp}');
-    debugPrint('🏠 Is Mocked:     ${position.isMocked}');
-    debugPrint('═══════════════════════════════════════════════════════\n');
   }
 
   @override

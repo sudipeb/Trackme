@@ -84,6 +84,8 @@ class _UserLocationState extends State<UserLocation> {
             Geolocator.getPositionStream(
               locationSettings: Platform.isAndroid
                   ? AndroidSettings(
+                      intervalDuration: Duration(seconds: 10),
+                      //not necessary for us
                       distanceFilter: 100,
                       foregroundNotificationConfig:
                           ForegroundNotificationConfig(

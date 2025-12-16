@@ -92,15 +92,47 @@ class _UserLocationState extends State<UserLocation> {
               _currentPosition = position;
               _statusMessage = 'Tracking active';
             });
-            debugPrint('Location: ${position.latitude}, ${position.longitude}');
+            // Print all location data to debug console
+            _printLocationData(position);
           },
           onError: (e) {
             setState(() {
               _statusMessage = 'Error: $e';
               _hasError = true;
             });
+            debugPrint('❌ Location Error: $e');
           },
         );
+  }
+
+  void _printLocationData(Position position) {
+    debugPrint('═══════════════════════════════════════════════════════');
+    debugPrint('📍 LOCATION UPDATE - ${DateTime.now()}');
+    debugPrint('═══════════════════════════════════════════════════════');
+    debugPrint('📌 Latitude:      ${position.latitude}');
+    debugPrint('📌 Longitude:     ${position.longitude}');
+    debugPrint(
+      '🎯 Accuracy:      ± ${position.accuracy.toStringAsFixed(2)} meters',
+    );
+    debugPrint(
+      '🏔️  Altitude:      ${position.altitude.toStringAsFixed(2)} meters',
+    );
+    debugPrint(
+      '📏 Alt Accuracy:  ± ${position.altitudeAccuracy.toStringAsFixed(2)} meters',
+    );
+    debugPrint(
+      '🚀 Speed:         ${position.speed.toStringAsFixed(2)} m/s (${(position.speed * 3.6).toStringAsFixed(2)} km/h)',
+    );
+    debugPrint(
+      '📐 Speed Accuracy: ± ${position.speedAccuracy.toStringAsFixed(2)} m/s',
+    );
+    debugPrint('🧭 Heading:       ${position.heading.toStringAsFixed(2)}°');
+    debugPrint(
+      '📐 Head Accuracy: ± ${position.headingAccuracy.toStringAsFixed(2)}°',
+    );
+    debugPrint('⏰ Timestamp:     ${position.timestamp}');
+    debugPrint('🏠 Is Mocked:     ${position.isMocked}');
+    debugPrint('═══════════════════════════════════════════════════════\n');
   }
 
   @override

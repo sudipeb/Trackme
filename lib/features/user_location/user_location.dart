@@ -84,6 +84,7 @@ class _UserLocationState extends State<UserLocation> {
             Geolocator.getPositionStream(
               locationSettings: Platform.isAndroid
                   ? AndroidSettings(
+                      distanceFilter: 100,
                       foregroundNotificationConfig:
                           ForegroundNotificationConfig(
                             notificationTitle:
@@ -91,6 +92,7 @@ class _UserLocationState extends State<UserLocation> {
                             notificationText: "Location Fetching in background",
                             // enableWakeLock: true,
                             enableWifiLock: true,
+                            notificationIcon: AndroidResource(name: "Track me"),
                           ),
                     )
                   : AppleSettings(

@@ -212,12 +212,17 @@ class _UserLocationState extends State<UserLocation> {
                             const SizedBox(height: 12),
                             _buildLocationRow(
                               'Accuracy',
-                              '${_currentPosition!.accuracy.toStringAsFixed(1)} m',
+                              '± ${_currentPosition!.accuracy.toStringAsFixed(1)} m',
                             ),
                             const SizedBox(height: 12),
                             _buildLocationRow(
                               'Speed',
                               '${(_currentPosition!.speed * 3.6).toStringAsFixed(1)} km/h',
+                            ),
+                            const SizedBox(height: 12),
+                            _buildLocationRow(
+                              'Altitude',
+                              '${_currentPosition!.altitude.toStringAsFixed(1)} m',
                             ),
                           ],
                         )
